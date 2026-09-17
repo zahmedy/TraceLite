@@ -3,7 +3,7 @@
 #include <bpf/bpf_tracing.h>
 
 struct exec_key {
-	char comm[16];
+	char filename[256];
 };
 
 struct {
@@ -17,9 +17,19 @@ SEC("tracepoint/syscalls/sys_enter_execve")
 
 int handle_execve(struct trace_event_raw_sys_enter *ctx) {
 	struct exec_key key = {};
-
-	bpf_get_current_comm(key.comm, sizeof(key.comm));
 	
+	const char *filename = (const char *)ctx->args[0];
+
+	long ret = bpf_probe_read_user_str(
+		key.filename,
+		sizeof(key.filename),
+		filename
+	);
+
+	if (ret < 0) {
+	   return 0;
+	}
+	   
 	__u64 *value = bpf_map_lookup_elem(&hash_map, &key);
 
 	if (value) {
