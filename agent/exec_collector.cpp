@@ -39,6 +39,26 @@ int main(int argc, char const *argv[])
         return 1;
     }
 
+    struct bpf_link *link =
+        bpf_program__attach_tracepoint(
+            prog,
+            "syscalls",
+            "sys_enter_execve");
+
+    if (!link)
+    {
+        std::cerr << "Failed to attach: "
+                  << strerror(errno) << "\n";
+        bpf_object__close(obj);
+        return 1;
+    }
+
+    std::cout << "Tracepoint attached! Press Enter to stop.\n";
+
+    std::cin.get();
+
+    // clean up
+    bpf_link__destroy(link);
     bpf_object__close(obj);
 
     /* code */
